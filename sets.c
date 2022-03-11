@@ -20,7 +20,7 @@ int main() {
     int8_t curChar      = 0;
     uint64_t fullAmount = 0;
     uint64_t lettersAmounts[75] = {};
-
+    'a' - '0';
     while ((curChar = getchar()) != '\n') {
         lettersAmounts[curChar - '0']++;
         fullAmount++;

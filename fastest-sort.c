@@ -128,7 +128,7 @@ void fast_sort(unsigned *begin, unsigned *end) {
     }
     
     free(copyArr);
-}; 
+}
 
 // int main() {
 
