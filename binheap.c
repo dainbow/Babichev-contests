@@ -4,27 +4,28 @@
 #include <assert.h>
 
 typedef struct binNode {
-    int64_t value;
+    int32_t value;
 
     struct binNode* parent;
     struct binNode* next;
     struct binNode* lChild;
 
-    uint64_t degree;
+    uint32_t idx;
+    uint32_t degree;
 } node;
 
 struct idxInfo {
     struct binNode* elem;
     uint32_t heapNum;
+    uint8_t isFree;
 };
 
 node* mergeHeaps (node* heap1, node* heap2) {
     if (heap1 == NULL)
         return heap2;
-    
+
     if (heap2 == NULL)
         return heap1;
-
 
     node* head = NULL;
     node* rememberHead = NULL;
@@ -166,48 +167,56 @@ node* unionHeap(node* heap) {
     return rememberHead;
 }
 
-node* binInsert(node* head, int64_t value) {
-    node* newElem = calloc(1, sizeof(node));
+node* binInsert(node* head, int32_t value, node** newElemAdr, uint32_t idx) {
+    *newElemAdr = calloc(1, sizeof(node));
 
-    newElem->value  = value;
+    (*newElemAdr)->value  = value;
+    (*newElemAdr)->idx    = idx;
 
-    return unionHeap(mergeHeaps(head, newElem));
+    return unionHeap(mergeHeaps(head, *newElemAdr));
 }
 
-node* extractMin(node* heap, int64_t* minValueAdr) {
+node* extractMin(node* heap, node** minValueAdr, uint8_t deleteFlag) {
     node* rememberHead = heap;
     node* prevNode     = NULL;
 
-    int64_t minValue = heap->value;
+    int32_t minValue = heap->value;
     node* minNode = heap;
     node* minPrev = NULL;
 
 
-    while(heap->next) {
+    while(heap) {
         if (heap->value < minValue) {
             minNode = heap;
             minPrev = prevNode;
 
             minValue = heap->value;
         }
+        else if (heap->value == minValue) {
+            if (heap->idx < minNode->idx) {
+                minNode = heap;
+                minPrev = prevNode;
+            }
+        }
 
         prevNode = heap;
         heap = heap->next;
     }
 
-    if (minPrev) {
-        minPrev = minNode->next;
-    }
+    if (minValueAdr)
+        *minValueAdr = minNode;
 
-    if (minValue)
-        *minValueAdr = minNode->value;
+    if (deleteFlag == 0)
+        return rememberHead;
+
+    if (minPrev) {
+        minPrev->next = minNode->next;
+    }
 
     node* child = minNode->lChild;
 
     if (minNode == rememberHead)
         rememberHead = minNode->next;
-    free(minNode);
-
 
     if (child) {
         while (child) {
@@ -223,13 +232,20 @@ node* extractMin(node* heap, int64_t* minValueAdr) {
     return rememberHead;
 }
 
-void changeValue (node* elemToChange, int64_t value) {
+void changeValue (node* elemToChange, int32_t value, struct idxInfo* idxArr) {
     if (value < elemToChange->value) {
         elemToChange->value = value;
         while (elemToChange->parent && (elemToChange->parent->value > elemToChange->value)) {
-            int64_t tempValue           = elemToChange->value;
+            int32_t tempValue           = elemToChange->value;
             elemToChange->value         = elemToChange->parent->value;
             elemToChange->parent->value = tempValue;
+
+            idxArr[elemToChange->parent->idx].elem = elemToChange;
+            idxArr[elemToChange->idx].elem = elemToChange->parent;
+
+            uint32_t tempIdx            = elemToChange->idx;
+            elemToChange->idx           = elemToChange->parent->idx;
+            elemToChange->parent->idx   = tempIdx;
 
             elemToChange = elemToChange->parent;
         }   
@@ -242,13 +258,15 @@ void changeValue (node* elemToChange, int64_t value) {
             node* child = elemToChange->lChild;
             
             node* minChild = NULL;
-            int64_t minValue = INT64_MAX;
+            int32_t minValue = INT32_MAX;
 
             while (child) {
                 if (child->value < minValue) {
                     minValue = child->value;
                     minChild = child;
                 }
+
+                child = child->next;
             }          
 
             if (minValue > elemToChange->value)
@@ -257,6 +275,13 @@ void changeValue (node* elemToChange, int64_t value) {
                 minChild->value     = elemToChange->value;
                 elemToChange->value = minValue;
 
+                idxArr[minChild->idx].elem = elemToChange;
+                idxArr[elemToChange->idx].elem = minChild;
+
+                uint32_t tempIdx    = minChild->idx;
+                minChild->idx       = elemToChange->idx;
+                elemToChange->idx   = tempIdx;
+
                 elemToChange = minChild;
             }
         }
@@ -264,16 +289,43 @@ void changeValue (node* elemToChange, int64_t value) {
 }
 
 node* printMin (node* heap) {
-    int64_t minValue = 0;
-    node* returnV = extractMin(heap, &minValue);
+    node* minValue = NULL;
+    node* returnV  = extractMin(heap, &minValue, 0);
 
-    printf("%ld\n", minValue);
+    printf("%d\n", minValue->value);
     return returnV;
 }
 
-node* deleteElem (node* heap, node* elemToDel) {
-    changeValue(elemToDel, INT64_MIN);
-    return extractMin(heap, NULL);
+node* deleteElem (node* heap, node* elemToDel, struct idxInfo* idxArr) {
+    changeValue(elemToDel, INT32_MIN, idxArr);
+    node* retValue = extractMin(heap, NULL, 1);
+
+    idxArr[elemToDel->idx].isFree = 1;
+    free(elemToDel);
+
+    return retValue;
+}
+
+node* moveHeaps (node* heapD, node* heapS, struct idxInfo* idxArr, uint32_t heapDNum) {
+    node* minHeap = NULL;
+
+    uint8_t breakFlag = 0;
+    for (;;) {
+        if ((heapS = extractMin(heapS, &minHeap, 1)) == NULL)
+            breakFlag = 1;
+
+        minHeap->next   = NULL;
+        minHeap->degree = 0;
+        minHeap->lChild = NULL;
+        idxArr[minHeap->idx].heapNum = heapDNum;
+
+        heapD = unionHeap(mergeHeaps(heapD, minHeap));
+        
+        if (breakFlag)
+            break;
+    }
+
+    return heapD;
 }
 
 int main () {
@@ -281,50 +333,94 @@ int main () {
     uint32_t opAmount   = 0;
     scanf("%u %u", &heapAmount, &opAmount);
 
-    node** heapsArr = calloc(heapAmount, sizeof(node*));
-    struct idxInfo* idxArr   = calloc(1000000, sizeof(struct idxInfo));
+    node** heapsArr = calloc(heapAmount + 1, sizeof(node*));
+
+    struct idxInfo* idxArr   = malloc(2 * sizeof(struct idxInfo));
+    uint32_t curIdx  = 1;
+    uint32_t arrSize = 2;
 
     uint32_t opNum = 0;
     for (uint32_t curOp = 0; curOp < opAmount; curOp++) {
-        scanf("%u", opNum);
+        scanf("%u", &opNum);
 
         switch (opNum) {
+        case 0: {
+            uint32_t heapNum = 0;
+            int32_t newValue = 0;
+
+            scanf("%u %d", &heapNum, &newValue);
+
+            idxArr[curIdx].elem    = NULL;
+            idxArr[curIdx].heapNum = 0;
+            idxArr[curIdx].isFree  = 0;
+
+            heapsArr[heapNum] = binInsert(heapsArr[heapNum], newValue, &idxArr[curIdx].elem, curIdx);
+            idxArr[curIdx++].heapNum = heapNum;
+
+            if (curIdx == arrSize) {
+                idxArr  = realloc(idxArr, (2 * arrSize + 1) * sizeof(struct idxInfo));
+                arrSize = 2 * arrSize + 1;
+            }
+
+            break;
+        }
+        case 1: {
+            uint32_t heapDNum = 0;
+            uint32_t heapSNum = 0;
+
+            scanf("%u %u", &heapSNum, &heapDNum);
+
+            heapsArr[heapDNum] = moveHeaps(heapsArr[heapDNum], heapsArr[heapSNum], idxArr, heapDNum);
+            heapsArr[heapSNum] = NULL;
+
+            break;
+        }
         case 2: {
             uint32_t elemIdx = 0;
-            scanf("%u");
+            scanf("%u", &elemIdx);
 
-            deleteElem(idxArr[elemIdx].heapNum, idxArr[elemIdx].elem);
+            heapsArr[idxArr[elemIdx].heapNum] = deleteElem(heapsArr[idxArr[elemIdx].heapNum], idxArr[elemIdx].elem, idxArr);
             break;
         }
         case 3: {
             uint32_t elemIdx = 0;
-            int64_t newValue = 0;
+            int32_t newValue = 0;
 
-            scanf("%u %ld", &elemIdx, &newValue);
+            scanf("%u %d", &elemIdx, &newValue);
 
-            changeValue(idxArr[elemIdx], newValue);
+            changeValue(idxArr[elemIdx].elem, newValue, idxArr);
             break;
         }
         case 4: {
             uint32_t heapNum = 0;
             scanf("%u", &heapNum);
 
-            printMin(heapsArr[heapNum]);
+            heapsArr[heapNum] = printMin(heapsArr[heapNum]);
+            break;
         }
+        case 5: {
+            uint32_t heapNum = 0;
+            scanf("%u", &heapNum);
             
-        
+            node* minNode = NULL;;
+            heapsArr[heapNum] = extractMin(heapsArr[heapNum], &minNode, 1);
+
+            idxArr[minNode->idx].isFree = 1;
+            free(minNode);
+
+            break;
+        }
         default:
+            curOp = UINT32_MAX - 1;
             break;
         }
     }
 
-    printf("OK\n");
+    for (uint32_t tempIdx = 1; tempIdx < curIdx; tempIdx++) {
+        if (idxArr[tempIdx].isFree == 0)
+            free(idxArr[tempIdx].elem);
+    }
+
+    free(heapsArr);
+    free(idxArr);
 }
-
-// if (heap->value < heap->next->value) {
-//                         heap->next = heap->next->next;
-//                         heap->next->next = heap->lChild;
-//                         heap->next->parent     = heap;
-
-//                         heap->lChild = heap->next;
-//                     }
