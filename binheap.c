@@ -296,6 +296,8 @@ int main () {
             scanf("%u %d", &heapNum, &newValue);
 
             idxArr[curIdx].elem    = calloc(1, sizeof(node));
+            assert(idxArr[curIdx].elem != NULL);
+
             idxArr[curIdx].heapNum = heapNum;
 
             heapsArr[heapNum] = binInsert(heapsArr[heapNum], newValue, idxArr[curIdx].elem, curIdx);
@@ -317,22 +319,25 @@ int main () {
 
             scanf("%u %u", &heapSNum, &heapDNum);
 
-            node* result = NULL;
-            if (heapsArr[heapDNum] || heapsArr[heapSNum]) {
-                result = moveHeaps(heapsArr[heapDNum], heapsArr[heapSNum], idxArr, heapDNum, heapSNum, curIdx);
-            
-                if (result == NULL)
-                    abort();
-            }
-            else {
-                result = moveHeaps(heapsArr[heapDNum], heapsArr[heapSNum], idxArr, heapDNum, heapSNum, curIdx);
+            if (heapDNum != heapSNum) {
+                node* result = NULL;
+                if (heapsArr[heapDNum] || heapsArr[heapSNum]) {
+                    result = moveHeaps(heapsArr[heapDNum], heapsArr[heapSNum], idxArr, heapDNum, heapSNum, curIdx);
+                
+                    if (result == NULL)
+                        abort();
+                }
+                else {
+                    result = moveHeaps(heapsArr[heapDNum], heapsArr[heapSNum], idxArr, heapDNum, heapSNum, curIdx);
 
-                if (result != NULL)
-                    abort();
+                    if (result != NULL)
+
+                        abort();
+                }
+                
+                heapsArr[heapDNum] = result; 
+                heapsArr[heapSNum] = NULL;
             }
-            
-            heapsArr[heapDNum] = result; 
-            heapsArr[heapSNum] = NULL;
 
             break;
         }
