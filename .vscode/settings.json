@@ -17,6 +17,7 @@
         "tuple": "c",
         "type_traits": "c",
         "utility": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "valarray": "c"
     }
 }
