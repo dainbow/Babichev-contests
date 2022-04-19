@@ -18,6 +18,9 @@
         "type_traits": "c",
         "utility": "c",
         "stdbool.h": "c",
-        "valarray": "c"
+        "valarray": "c",
+        "avl.h": "c",
+        "sets_avl.h": "c",
+        "splay.h": "c"
     }
 }
