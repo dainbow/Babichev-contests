@@ -1,7 +1,7 @@
 #include "splay.h"
 
 #define MAX_RECURSION_DEPTH 1000
-#define TREE_TYPE "%ld"
+#define TREE_TYPE "%d"
 #define LEFT_BRANCH  "l%d"
 #define RIGHT_BRANCH "r%d"
 #define LEFT_BRANCH_VALUE  curNodeNumber
@@ -43,11 +43,14 @@ void PrintTreeNodes(const Node* root, Node* curNode, FILE* output) {
                 "<TD COLSPAN=\"2\">" TREE_TYPE "</TD>"
             "</TR>"
             "<TR>"
+                "<TD COLSPAN=\"2\">%ld</TD>"
+            "</TR>"
+            "<TR>"
                 "<TD PORT = \"l%d\">" LEFT_BRANCH "</TD>"
                 "<TD PORT = \"r%d\">" RIGHT_BRANCH "</TD>"
             "</TR>"
             "</TABLE>>];\n",
-            curNode - root, curNode->key,
+            curNode - root, curNode->key, curNode->sum,
             curNodeNumber, LEFT_BRANCH_VALUE, 
             curNodeNumber, RIGHT_BRANCH_VALUE);
 
@@ -70,10 +73,13 @@ void PrintTreeNodes(const Node* root, Node* curNode, FILE* output) {
                 "<TD COLSPAN=\"2\">" TREE_TYPE "</TD>"
             "</TR>"
             "<TR>"
+                "<TD COLSPAN=\"2\">%ld</TD>"
+            "</TR>"
+            "<TR>"
                 "<TD PORT = \"r%d\">" RIGHT_BRANCH "</TD>"
             "</TR>"
             "</TABLE>>];\n",
-            curNode - root, curNode->key,
+            curNode - root, curNode->key, curNode->sum,
             curNodeNumber, RIGHT_BRANCH_VALUE);
 
         curRecursionDepth += 1;
@@ -92,10 +98,13 @@ void PrintTreeNodes(const Node* root, Node* curNode, FILE* output) {
                 "<TD COLSPAN=\"2\">" TREE_TYPE "</TD>"
             "</TR>"
             "<TR>"
+                "<TD COLSPAN=\"2\">%ld</TD>"
+            "</TR>"
+            "<TR>"
                 "<TD PORT = \"l%d\">" LEFT_BRANCH "</TD>"
             "</TR>"
             "</TABLE>>];\n",
-            curNode - root, curNode->key,
+            curNode - root, curNode->key, curNode->sum,
             curNodeNumber, LEFT_BRANCH_VALUE);
 
         curRecursionDepth += 1;
@@ -114,11 +123,14 @@ void PrintTreeNodes(const Node* root, Node* curNode, FILE* output) {
                 "<TD COLSPAN=\"2\">" TREE_TYPE "</TD>"
             "</TR>"
             "<TR>"
+                "<TD COLSPAN=\"2\">%ld</TD>"
+            "</TR>"
+            "<TR>"
                 "<TD> 0 </TD>"
                 "<TD> 0 </TD>"
             "</TR>"
-            "</TABLE>>];\n", 
-            curNode - root, curNode->key);
+            "</TABLE>>];\n",
+            curNode - root, curNode->key, curNode->sum);
     }
 }
 
